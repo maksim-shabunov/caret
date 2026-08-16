@@ -26,6 +26,9 @@ Requires macOS 15 or later. Universal (Apple silicon and Intel).
 brew install --cask maksim-shabunov/tap/caret
 ```
 
+Homebrew will note that the tap is untrusted, because it is not one of the
+official ones. `brew trust --cask maksim-shabunov/tap/caret` vouches for it.
+
 Or without Homebrew:
 
 ```sh
