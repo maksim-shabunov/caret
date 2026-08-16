@@ -14,7 +14,7 @@ jobs:
   test:
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       # Caret needs Swift 6.2, which arrived with Xcode 26. Runner images carry
       # several Xcodes and default to none in particular, so the newest is
@@ -36,7 +36,7 @@ jobs:
       - name: Package
         run: ./build.sh --adhoc --zip --version 0.0.0-ci
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: Caret-ci
           path: dist/*.zip
