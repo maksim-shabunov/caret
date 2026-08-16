@@ -25,6 +25,22 @@ jobs:
           sudo xcode-select -s "$(ls -d /Applications/Xcode*.app | sort -V | tail -1)"
           swift --version
 
+      # macOS ships bash 3.2, which reads a variable name byte by byte — so
+      # `$VAR…` takes the first byte of the ellipsis for part of the name, looks
+      # up something nobody set, and `set -u` ends the script there. It has
+      # happened twice now, once in build.sh and once in install.sh, and neither
+      # `bash -n` nor shellcheck sees it. Braces fix it; this makes sure they
+      # stay.
+      - name: Shell scripts
+        run: |
+          bash -n build.sh install.sh
+          brew install --quiet shellcheck
+          shellcheck build.sh install.sh
+          perl -ne 'if (/\$[A-Za-z_][A-Za-z_0-9]*[^\x00-\x7F]/) {
+              print "::error file=$ARGV,line=$.::Brace this as \${VAR} — bash 3.2 will eat the character after it\n";
+              $bad = 1
+          } END { exit($bad ? 1 : 0) }' build.sh install.sh
+
       - name: Build
         run: swift build --build-tests
 

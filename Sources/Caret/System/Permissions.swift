@@ -21,25 +21,34 @@ public final class Permissions {
 
     @ObservationIgnored private var timer: Timer?
 
-    /// Whether permission was granted to an earlier version and has not carried
-    /// over to this one.
+    /// Whether an earlier version's grant has been left behind rather than
+    /// carried over.
     ///
     /// This is the ad-hoc update, and it is worth detecting because it is the
     /// one failure that looks like nothing is wrong. macOS records the grant
     /// against the app's signature; a downloaded Caret is signed ad hoc, which
     /// means signed by its own contents, so every version signs differently. The
     /// old entry stays in the Accessibility list, still ticked, granting
-    /// nothing — and `AXIsProcessTrusted` just answers no, with no way to ask
-    /// why. So the fact is remembered instead: a version that once held the
-    /// grant, and a running version that does not, is that situation and no
-    /// other. A first run has nothing recorded and says nothing.
+    /// nothing — and `AXIsProcessTrusted` only ever answers no, with no way to
+    /// ask why.
+    ///
+    /// So the question is asked of what Caret can see for itself: a version ran
+    /// here before, this is a different one, and it does not have permission.
+    /// Whether the earlier version *held* the grant is deliberately not part of
+    /// it — recording that would have been the tidier test and would have missed
+    /// every user upgrading from a version too old to have recorded anything,
+    /// which on the day this shipped was all of them.
+    ///
+    /// Someone opening Caret for the first time has no previous version and is
+    /// told nothing. Someone who relaunches without having granted permission
+    /// yet is on the same version, and is also told nothing — they have not been
+    /// to Settings at all, so there is no stale entry to explain.
     public var hasStaleGrant: Bool {
-        guard !isTrusted, let granted = defaults.string(forKey: Self.lastTrustedVersion)
-        else { return false }
-        return granted != Self.currentVersion
+        guard !isTrusted, let previous else { return false }
+        return previous != Self.currentVersion
     }
 
-    private static let lastTrustedVersion = "lastTrustedVersion"
+    private static let lastLaunchedVersion = "lastLaunchedVersion"
 
     private static var currentVersion: String {
         Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "unknown"
@@ -47,13 +56,13 @@ public final class Permissions {
 
     @ObservationIgnored private let defaults: UserDefaults
 
+    /// The version that ran last, read once before this launch overwrites it.
+    @ObservationIgnored private let previous: String?
+
     public init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
-        if isTrusted { rememberGrant() }
-    }
-
-    private func rememberGrant() {
-        defaults.set(Self.currentVersion, forKey: Self.lastTrustedVersion)
+        previous = defaults.string(forKey: Self.lastLaunchedVersion)
+        defaults.set(Self.currentVersion, forKey: Self.lastLaunchedVersion)
     }
 
     /// Asks the system to show the standard permission prompt.
@@ -66,7 +75,6 @@ public final class Permissions {
         // key itself has been stable for the entire life of the API.
         let options = ["AXTrustedCheckOptionPrompt": true]
         isTrusted = AXIsProcessTrustedWithOptions(options as CFDictionary)
-        if isTrusted { rememberGrant() }
         beginWatching()
     }
 
@@ -74,7 +82,6 @@ public final class Permissions {
         let trusted = AXIsProcessTrusted()
         guard trusted != isTrusted else { return }
         isTrusted = trusted
-        if trusted { rememberGrant() }
         onChange?(trusted)
     }
 

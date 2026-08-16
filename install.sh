@@ -60,7 +60,10 @@ ditto -x -k "$WORK/Caret.zip" "$WORK/unpacked"
 osascript -e 'tell application id "com.maksim.caret" to quit' >/dev/null 2>&1 || true
 sleep 1
 
-echo "Installing to $DESTINATION…"
+# Braced because the ellipsis is multibyte and macOS ships bash 3.2, which is
+# not: it takes the first byte of `…` for part of the variable name, looks up a
+# name nobody set, and `set -u` ends the install right there.
+echo "Installing to ${DESTINATION}…"
 rm -rf "${DESTINATION:?}/$APP"
 ditto "$WORK/unpacked/$APP" "$DESTINATION/$APP"
 xattr -dr com.apple.quarantine "$DESTINATION/$APP" 2>/dev/null || true
