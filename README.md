@@ -24,7 +24,10 @@ Silent, native, and about as opinionated as a spell checker should be.
 
 <br>
 
-<img src="docs/images/demo.gif" width="680" alt="ghbdtn becoming привет as the space is typed">
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/demo-dark.gif">
+  <img src="docs/images/demo.gif" width="680" alt="ghbdtn becoming привет as the space is typed">
+</picture>
 
 </div>
 

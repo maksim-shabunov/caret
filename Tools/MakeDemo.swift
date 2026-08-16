@@ -19,14 +19,38 @@ import Foundation
 import ImageIO
 import UniformTypeIdentifiers
 
-// The app's own palette, light appearance. See UI/DesignSystem/Palette.swift.
-let canvas = NSColor(srgbRed: 0xFA / 255, green: 0xF9 / 255, blue: 0xF7 / 255, alpha: 1)
-let surface = NSColor.white
-let ink = NSColor(srgbRed: 0x2C / 255, green: 0x2A / 255, blue: 0x27 / 255, alpha: 1)
-let secondary = NSColor(srgbRed: 0x6B / 255, green: 0x67 / 255, blue: 0x60 / 255, alpha: 1)
-let tertiary = NSColor(srgbRed: 0x99 / 255, green: 0x94 / 255, blue: 0x8B / 255, alpha: 1)
-let accent = NSColor(srgbRed: 0x5C / 255, green: 0x73 / 255, blue: 0x60 / 255, alpha: 1)
-let hairline = NSColor(srgbRed: 0x2C / 255, green: 0x2A / 255, blue: 0x27 / 255, alpha: 0.10)
+func rgb(_ value: Int, _ alpha: CGFloat = 1) -> NSColor {
+    NSColor(
+        srgbRed: CGFloat((value >> 16) & 0xFF) / 255,
+        green: CGFloat((value >> 8) & 0xFF) / 255,
+        blue: CGFloat(value & 0xFF) / 255,
+        alpha: alpha
+    )
+}
+
+/// Both appearances, because the README is read in both and a light-only image
+/// is a bright slab in the middle of a dark page. Values copied from
+/// UI/DesignSystem/Palette.swift so the two cannot drift apart.
+struct Theme {
+    let name: String
+    let canvas, surface, ink, secondary, tertiary, accent, hairline: NSColor
+
+    static let light = Theme(
+        name: "demo",
+        canvas: rgb(0xFAF9F7), surface: .white, ink: rgb(0x2C2A27),
+        secondary: rgb(0x6B6760), tertiary: rgb(0x99948B), accent: rgb(0x5C7360),
+        hairline: rgb(0x2C2A27, 0.10)
+    )
+
+    static let dark = Theme(
+        name: "demo-dark",
+        canvas: rgb(0x1B1A18), surface: rgb(0x242220), ink: rgb(0xEEEBE5),
+        secondary: rgb(0xA6A199), tertiary: rgb(0x76716A), accent: rgb(0x8FA891),
+        hairline: rgb(0xEEEBE5, 0.12)
+    )
+}
+
+var theme = Theme.light
 
 let scale: CGFloat = 2
 let width: CGFloat = 720
@@ -82,22 +106,22 @@ func draw(_ frame: Frame, showCaret: Bool) -> CGImage {
     NSGraphicsContext.saveGraphicsState()
     NSGraphicsContext.current = graphics
 
-    canvas.setFill()
+    theme.canvas.setFill()
     CGRect(x: 0, y: 0, width: width, height: height).fill()
 
     // ---- the text field
     let field = CGRect(x: 56, y: 96, width: width - 112, height: 84)
     let rounded = NSBezierPath(roundedRect: field, xRadius: 14, yRadius: 14)
-    surface.setFill()
+    theme.surface.setFill()
     rounded.fill()
-    hairline.setStroke()
+    theme.hairline.setStroke()
     rounded.lineWidth = 1
     rounded.stroke()
 
     // ---- what has been typed
     let body = mono(30)
     let text = frame.typed as NSString
-    let colour = frame.corrected ? ink : secondary
+    let colour = frame.corrected ? theme.ink : theme.secondary
     let attributes: [NSAttributedString.Key: Any] = [.font: body, .foregroundColor: colour]
     let size = text.size(withAttributes: attributes)
     let textOrigin = CGPoint(x: field.minX + 28, y: field.midY - size.height / 2)
@@ -105,7 +129,7 @@ func draw(_ frame: Frame, showCaret: Bool) -> CGImage {
 
     // ---- the insertion point
     if showCaret {
-        accent.withAlphaComponent(0.9).setFill()
+        theme.accent.withAlphaComponent(0.9).setFill()
         CGRect(x: textOrigin.x + size.width + 2, y: field.midY - 18, width: 2.5, height: 36).fill()
     }
 
@@ -115,7 +139,7 @@ func draw(_ frame: Frame, showCaret: Bool) -> CGImage {
         at: CGPoint(x: field.minX + 2, y: field.maxY + 18),
         withAttributes: [
             .font: font(15, weight: .medium),
-            .foregroundColor: frame.corrected ? accent : tertiary,
+            .foregroundColor: frame.corrected ? theme.accent : theme.tertiary,
         ]
     )
 
@@ -124,7 +148,7 @@ func draw(_ frame: Frame, showCaret: Bool) -> CGImage {
         let note = "ghbdtn  →  привет      ⌘Z to undo" as NSString
         note.draw(
             at: CGPoint(x: field.minX + 2, y: field.minY - 40),
-            withAttributes: [.font: font(15), .foregroundColor: tertiary]
+            withAttributes: [.font: font(15), .foregroundColor: theme.tertiary]
         )
     }
 
@@ -186,6 +210,9 @@ func writeBanner(to url: URL) {
 let images = URL(fileURLWithPath: "docs/images")
 try? FileManager.default.createDirectory(at: images, withIntermediateDirectories: true)
 
-writeGIF(to: images.appendingPathComponent("demo.gif"))
-writeBanner(to: images.appendingPathComponent("demo.png"))
-print("wrote docs/images/demo.gif and docs/images/demo.png")
+for appearance in [Theme.light, Theme.dark] {
+    theme = appearance
+    writeGIF(to: images.appendingPathComponent("\(appearance.name).gif"))
+    writeBanner(to: images.appendingPathComponent("\(appearance.name).png"))
+    print("wrote docs/images/\(appearance.name).gif and .png")
+}
