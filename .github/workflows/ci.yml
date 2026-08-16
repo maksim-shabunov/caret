@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Caret needs Swift 6.2, which arrived with Xcode 26. Runner images carry
+      # several Xcodes and default to none in particular, so the newest is
+      # selected explicitly and printed — a version mismatch should say so in
+      # the log rather than surfacing as a syntax error three steps later.
+      - name: Select the newest Xcode
+        run: |
+          sudo xcode-select -s "$(ls -d /Applications/Xcode*.app | sort -V | tail -1)"
+          swift --version
+
+      - name: Build
+        run: swift build --build-tests
+
+      - name: Test
+        run: swift test
+
+      # Proves the thing people actually download can be produced, on every
+      # commit rather than only when a tag is pushed.
+      - name: Package
+        run: ./build.sh --adhoc --zip --version 0.0.0-ci
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Caret-ci
+          path: dist/*.zip
+          retention-days: 7

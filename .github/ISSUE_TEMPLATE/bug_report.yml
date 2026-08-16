@@ -1,0 +1,44 @@
+name: Bug report
+description: Caret corrected something it should not have, or missed something it should have caught
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you typed, what Caret did, and what you expected instead.
+      placeholder: |
+        I typed:     novum's
+        Caret made:  novumäs
+        I expected:  novum's, untouched
+    validations: {required: true}
+
+  - type: input
+    id: layouts
+    attributes:
+      label: Keyboard layouts
+      description: Which layouts you have enabled, and which was active at the time.
+      placeholder: ABC (active), Russian, Estonian
+    validations: {required: true}
+
+  - type: input
+    id: app
+    attributes:
+      label: Which app you were typing in
+      placeholder: Safari, Terminal, Notes…
+    validations: {required: true}
+
+  - type: textarea
+    id: history
+    attributes:
+      label: Recent corrections
+      description: >
+        Settings › Privacy lists them. Paste anything relevant — this is usually
+        the whole story. Leave it out if it would show anything private.
+
+  - type: input
+    id: version
+    attributes:
+      label: Caret and macOS versions
+      placeholder: Caret 1.0.0, macOS 15.2
+    validations: {required: true}

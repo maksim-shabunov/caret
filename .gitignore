@@ -1,0 +1,19 @@
+# SwiftPM
+.build/
+.swiftpm/
+Package.resolved
+
+# build.sh output
+build/
+dist/
+
+# Icon generation leaves this behind if iconutil fails part-way
+Caret.iconset/
+
+# Editor and agent settings
+.claude/
+.vscode/
+*.xcuserdatad
+
+# macOS
+.DS_Store

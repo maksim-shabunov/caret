@@ -1,0 +1,79 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to build, e.g. v1.0.0"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Select the newest Xcode
+        run: |
+          sudo xcode-select -s "$(ls -d /Applications/Xcode*.app | sort -V | tail -1)"
+          swift --version
+
+      - name: Test
+        run: swift test
+
+      - name: Version
+        id: version
+        run: |
+          TAG="${{ github.event.inputs.tag || github.ref_name }}"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
+
+      # Ad hoc, because signing for distribution needs a paid Apple Developer
+      # account and this project does not have one. The consequence is written
+      # down in the release notes rather than left for people to discover.
+      - name: Build
+        run: ./build.sh --adhoc --zip --version "${{ steps.version.outputs.version }}"
+
+      - name: Release notes
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          SHA="$(cut -d' ' -f1 "dist/Caret-$VERSION.zip.sha256")"
+          cat > notes.md <<EOF
+          ## Install
+
+          \`\`\`sh
+          brew install --cask maksim-shabunov/tap/caret
+          \`\`\`
+
+          Or download \`Caret-$VERSION.zip\` below, unzip it, and drag Caret to
+          Applications. The first launch needs one extra step — see
+          [Installing](https://github.com/${{ github.repository }}#installing).
+
+          \`\`\`
+          sha256  $SHA
+          \`\`\`
+
+          ## Note on updating
+
+          This build is signed ad hoc, because notarising requires a paid Apple
+          Developer account. macOS identifies an ad-hoc signed app by its
+          contents, so **every update looks like a new app and Accessibility has
+          to be granted again**. Caret detects this and shows you the way there.
+          Building from source avoids it entirely.
+          EOF
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: Caret ${{ steps.version.outputs.version }}
+          body_path: notes.md
+          files: |
+            dist/*.zip
+            dist/*.sha256
